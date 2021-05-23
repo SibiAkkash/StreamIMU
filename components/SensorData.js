@@ -201,6 +201,7 @@ const SensorData = (props) => {
 	return (
 		<View style={[styles.container, styles.borders]}>
 			{/* stream toggle */}
+			<Text>Stream data</Text>
 			<Switch
 				trackColor={{
 					false: theme.trackFalseColor,
@@ -212,9 +213,6 @@ const SensorData = (props) => {
 				}
 				value={isStreaming}
 			/>
-
-			{/* send state onPress, test */}
-			<Button title="send data" onPress={() => sendData()} />
 
 			{/* main view */}
 			<View style={[styles.sensorContainer]}>
