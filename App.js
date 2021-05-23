@@ -4,11 +4,6 @@ import { StyleSheet, Text, View } from "react-native";
 import SensorData from "./components/SensorData";
 
 export default function App() {
-	const [isStreaming, setIsStreaming] = useState(false);
-
-	const toggleStreaming = (value) => {
-		setIsStreaming((prevState) => !prevState);
-	};
 
 	return (
 		<View style={styles.container}>

@@ -10,26 +10,13 @@ import {
 import React, { useEffect, useState } from "react";
 import { Input, Switch, Slider } from "react-native-elements";
 import { Accelerometer, Gyroscope, Magnetometer } from "expo-sensors";
+import Accel from "./Accel";
+import Gyro from "./Gyro";
+import Mag from "./Mag";
 
 const mqtt = require("@taoqf/react-native-mqtt");
 
-function formatData(measurement) {
-	x = measurement.x.toPrecision(3);
-	y = measurement.y.toPrecision(3);
-	z = measurement.z.toPrecision(3);
-	return `x: ${x}\ny: ${y}\nz: ${z}`;
-}
-
-const theme = {
-	sensorContainer: "#9fe6a0",
-	sensorToggle: "#4aa96c",
-	sensorOutput: "#9fe6a0",
-	trackTrueColor: "#ff2e63",
-	trackFalseColor: "#767577",
-	textColor: "#eeeeee",
-	thumbColor: "#eeeeee",
-	sensorName: "#ff9a00",
-};
+import theme from "../constants/theme";
 
 let options = {
 	keepalive: 10,
@@ -79,9 +66,9 @@ const SensorData = (props) => {
 	});
 
 	useEffect(() => {
-		const client = mqtt.connect(`${SCHEME}://${IP}:${PORT}`, options);
-		client.on("connect", () => console.log("Connected"));
-		setClientRef(client);
+		// const client = mqtt.connect(`${SCHEME}://${IP}:${PORT}`, options);
+		// client.on("connect", () => console.log("Connected"));
+		// setClientRef(client);
 	}, []);
 
 	const sendData = () => {
@@ -214,84 +201,24 @@ const SensorData = (props) => {
 				value={isStreaming}
 			/>
 
-			{/* main view */}
-			<View style={[styles.sensorContainer]}>
-				<View style={[styles.sensorToggle]}>
-					<Switch
-						trackColor={{
-							false: theme.trackFalseColor,
-							true: theme.trackTrueColor,
-						}}
-						thumbColor={
-							accelSub ? theme.thumbColor : theme.thumbColor
-						}
-						onValueChange={() =>
-							accelSub
-								? _unsubscribe("Accelerometer")
-								: _subscribe("Accelerometer")
-						}
-						value={accelSub !== null}
-					/>
-					<Text style={[styles.text, styles.sensorName]}>
-						Accelerometer
-					</Text>
-				</View>
-				<View style={[styles.sensorOutput]}>
-					<Text style={styles.text}>{formatData(accel)}</Text>
-				</View>
-			</View>
-
-			<View style={[styles.sensorContainer]}>
-				<View style={[styles.sensorToggle]}>
-					<Switch
-						trackColor={{
-							false: theme.trackFalseColor,
-							true: theme.trackTrueColor,
-						}}
-						thumbColor={
-							gyroSub ? theme.thumbColor : theme.thumbColor
-						}
-						onValueChange={() =>
-							gyroSub
-								? _unsubscribe("Gyroscope")
-								: _subscribe("Gyroscope")
-						}
-						value={gyroSub !== null}
-					/>
-					<Text style={[styles.text, styles.sensorName]}>
-						Gyroscope
-					</Text>
-				</View>
-				<View style={[styles.sensorOutput]}>
-					<Text style={styles.text}>{formatData(gyro)}</Text>
-				</View>
-			</View>
-
-			<View style={[styles.sensorContainer]}>
-				<View style={[styles.sensorToggle]}>
-					<Switch
-						trackColor={{
-							false: theme.trackFalseColor,
-							true: theme.trackTrueColor,
-						}}
-						thumbColor={
-							magSub ? theme.thumbColor : theme.thumbColor
-						}
-						onValueChange={() =>
-							magSub
-								? _unsubscribe("Magnetometer")
-								: _subscribe("Magnetometer")
-						}
-						value={magSub !== null}
-					/>
-					<Text style={[styles.text, styles.sensorName]}>
-						Magnetometer
-					</Text>
-				</View>
-				<View style={[styles.sensorOutput]}>
-					<Text style={styles.text}>{formatData(mag)}</Text>
-				</View>
-			</View>
+			<Accel
+				subscription={accelSub}
+				data={accel}
+				subscribe={_subscribe}
+				unsubscribe={_unsubscribe}
+			/>
+			<Gyro
+				subscription={gyroSub}
+				data={gyro}
+				subscribe={_subscribe}
+				unsubscribe={_unsubscribe}
+			/>
+			<Mag
+				subscription={magSub}
+				data={mag}
+				subscribe={_subscribe}
+				unsubscribe={_unsubscribe}
+			/>
 		</View>
 	);
 };
@@ -313,50 +240,6 @@ const styles = StyleSheet.create({
 		marginHorizontal: 0,
 		marginVertical: 100,
 		padding: 16,
-	},
-	sensorContainer: {
-		flexBasis: "auto",
-		flexGrow: 1,
-
-		display: "flex",
-		alignSelf: "stretch",
-		marginVertical: 10,
-
-		backgroundColor: "#393e46",
-		borderRadius: 5,
-	},
-	sensorToggle: {
-		// flex: 1,
-		// flexGrow: 1,
-		flexBasis: "auto",
-
-		display: "flex",
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "space-between",
-
-		backgroundColor: "#222831",
-		padding: 10,
-		borderRadius: 5,
-	},
-	sensorOutput: {
-		// flex: 2,
-		flexBasis: "auto",
-		flexGrow: 1,
-
-		display: "flex",
-		justifyContent: "space-around",
-		alignItems: "center",
-		// paddingHorizontal: 10,
-	},
-	sensorName: {
-		fontSize: 18,
-		fontWeight: "bold",
-		color: "#08d9d6",
-	},
-	text: {
-		color: "#eeeeee",
-		fontSize: 20,
 	},
 });
 
