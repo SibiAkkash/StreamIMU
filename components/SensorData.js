@@ -7,14 +7,17 @@ import {
 	TextInput,
 	TouchableOpacityBase,
 } from "react-native";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Input, Switch, Slider } from "react-native-elements";
 import { Accelerometer, Gyroscope, Magnetometer } from "expo-sensors";
+
 import Accel from "./Accel";
 import Gyro from "./Gyro";
 import Mag from "./Mag";
 
 const mqtt = require("@taoqf/react-native-mqtt");
+
+import useInterval from "../helpers/useInterval";
 
 import theme from "../constants/theme";
 
@@ -30,9 +33,9 @@ let options = {
 	rejectUnauthorized: false,
 };
 
-const topic = "sensornode/livestream";
+const TOPIC = "sensornode/livestream";
 const SCHEME = "ws"; // TCP doesn't work
-const IP = "192.168.1.4"; // IP of broker
+const IP = "192.168.1.7"; // IP of broker
 const PORT = "8883";
 
 const SensorData = (props) => {
@@ -65,10 +68,25 @@ const SensorData = (props) => {
 		z: 0,
 	});
 
+	useInterval(
+		() => {
+			// console.log(gyro.x, gyro.y, gyro.x);
+			clientRef.publish(
+				TOPIC,
+				JSON.stringify({
+					acc: accel,
+					gyro: gyro,
+					mag: mag,
+				})
+			);
+		},
+		isStreaming ? 50 : null
+	);
+
 	useEffect(() => {
-		// const client = mqtt.connect(`${SCHEME}://${IP}:${PORT}`, options);
-		// client.on("connect", () => console.log("Connected"));
-		// setClientRef(client);
+		const client = mqtt.connect(`${SCHEME}://${IP}:${PORT}`, options);
+		client.on("connect", () => console.log("Connected"));
+		setClientRef(client);
 	}, []);
 
 	const sendData = () => {
@@ -93,19 +111,6 @@ const SensorData = (props) => {
 		clientRef && clientRef.end();
 	};
 
-	async function checkPermissions() {
-		//TODO check this
-		let status = await Accelerometer.getPermissionsAsync();
-		if (status !== "granted") {
-			let finalStatus = await Accelerometer.requestPermissionsAsync();
-			if (finalStatus !== "granted") {
-				return;
-			}
-		}
-		status = finalStatus;
-		return status;
-	}
-
 	const _subscribe = (sensorType) => {
 		console.log(`Subscribing to ${sensorType}...`);
 		switch (sensorType) {
@@ -113,12 +118,15 @@ const SensorData = (props) => {
 				setAccelSub(
 					Accelerometer.addListener((data) => setAccel(data))
 				);
+				Accelerometer.setUpdateInterval(50);
 				break;
 			case "Gyroscope":
 				setGyroSub(Gyroscope.addListener((data) => setGyro(data)));
+				Gyroscope.setUpdateInterval(50);
 				break;
 			case "Magnetometer":
 				setMagSub(Magnetometer.addListener((data) => setMag(data)));
+				Magnetometer.setUpdateInterval(50);
 				break;
 		}
 	};
@@ -146,23 +154,11 @@ const SensorData = (props) => {
 	const startStreaming = () => {
 		//TODO check if client is connected first
 		console.log("Streaming data...");
-		let interval = setInterval(() => {
-			clientRef.publish(
-				topic,
-				JSON.stringify({
-					acc: accel,
-					gyro: gyro,
-					mag: mag,
-				})
-			);
-		}, 1000);
-		setStreamIntervalRef(interval);
 		setIsStreaming(true);
 	};
 
 	const stopStreaming = () => {
 		console.log("Stopping stream...");
-		clearInterval(streamIntervalRef);
 		setIsStreaming(false);
 	};
 
@@ -196,26 +192,26 @@ const SensorData = (props) => {
 				}}
 				thumbColor={isStreaming ? theme.thumbColor : theme.thumbColor}
 				onValueChange={() =>
-					isStreaming ? stopStreaming() : startStreaming()
+					isStreaming ? setIsStreaming(false) : setIsStreaming(true)
 				}
 				value={isStreaming}
 			/>
 
 			<Accel
 				subscription={accelSub}
-				data={accel}
+				// data={accel}
 				subscribe={_subscribe}
 				unsubscribe={_unsubscribe}
 			/>
 			<Gyro
 				subscription={gyroSub}
-				data={gyro}
+				// data={gyro}
 				subscribe={_subscribe}
 				unsubscribe={_unsubscribe}
 			/>
 			<Mag
 				subscription={magSub}
-				data={mag}
+				// data={mag}
 				subscribe={_subscribe}
 				unsubscribe={_unsubscribe}
 			/>

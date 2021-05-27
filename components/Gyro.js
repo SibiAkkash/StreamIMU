@@ -29,7 +29,7 @@ const Gyro = (props) => {
 				</Text>
 			</View>
 			<View style={[sensorStyles.sensorOutput]}>
-				<Text style={sensorStyles.text}>{formatData(props.data)}</Text>
+				{/* <Text style={sensorStyles.text}>{formatData(props.data)}</Text> */}
 			</View>
 		</View>
 	);
