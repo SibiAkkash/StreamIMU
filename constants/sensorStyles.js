@@ -33,6 +33,7 @@ const sensorStyles = StyleSheet.create({
 		// flex: 1,
 		// flexGrow: 1,
 		flexBasis: "auto",
+		width: "100%",
 
 		display: "flex",
 		flexDirection: "row",
@@ -41,7 +42,8 @@ const sensorStyles = StyleSheet.create({
 
 		backgroundColor: "#222831",
 		padding: 10,
-		borderRadius: 5,
+		marginVertical: 5,
+		borderRadius: 10,
 	},
 	sensorOutput: {
 		// flex: 2,
@@ -54,7 +56,7 @@ const sensorStyles = StyleSheet.create({
 		// paddingHorizontal: 10,
 	},
 	sensorName: {
-		fontSize: 18,
+		fontSize: 16,
 		fontWeight: "bold",
 		color: "#08d9d6",
 	},

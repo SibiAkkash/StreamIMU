@@ -1,19 +1,21 @@
+import { View, Text, StyleSheet, Alert, Switch } from "react-native";
+import Slider from "@react-native-community/slider";
+import React, { useEffect, useState } from "react";
+import { Input, Icon } from "react-native-elements";
 import {
-	View,
-	Text,
-	Button,
-	StyleSheet,
-	Alert,
-	TextInput,
-	TouchableOpacityBase,
-} from "react-native";
-import React, { useEffect, useState, useRef } from "react";
-import { Input, Switch, Slider } from "react-native-elements";
-import { Accelerometer, Gyroscope, Magnetometer } from "expo-sensors";
-
+	Accelerometer,
+	Gyroscope,
+	Magnetometer,
+	DeviceMotion,
+} from "expo-sensors";
+import sensorStyles from "../constants/sensorStyles";
+import { Animated } from "react-native";
 import Accel from "./Accel";
 import Gyro from "./Gyro";
 import Mag from "./Mag";
+
+// import CustomSwitch from "../components/CustomSwitch";
+// import SensorSwitch from "../components/SensorSwitch";
 
 const mqtt = require("@taoqf/react-native-mqtt");
 
@@ -33,19 +35,24 @@ let options = {
 	rejectUnauthorized: false,
 };
 
-const TOPIC = "sensornode/livestream";
+const SENSOR_TOPIC = "stream/imu";
+const JAW_TOPIC = "stream/jaw_angle";
+const LINK_TOPIC = "stream/link_angle";
 const SCHEME = "ws"; // TCP doesn't work
 const IP = "192.168.1.7"; // IP of broker
 const PORT = "8883";
 
 const SensorData = (props) => {
+	const [serverIP, setServerIP] = useState("192.168.1.6");
+	const [isConnected, setIsConnected] = useState(false);
 	const [isStreaming, setIsStreaming] = useState(false);
 	// mqtt client reference
 	const [clientRef, setClientRef] = useState(null);
-	// store the stream interval reference, to stop streaming when switch is toggled
-	const [streamIntervalRef, setStreamIntervalRef] = useState(null);
 	// sampleRate in Hz
 	const [samplingRate, setSamplingRate] = useState(100);
+
+	const [jawAngle, setJawAngle] = useState(30);
+	const [linkAngle, setLinkAngle] = useState(30);
 
 	// subscriptions for listening to sensor values
 	const [accelSub, setAccelSub] = useState(null);
@@ -70,9 +77,8 @@ const SensorData = (props) => {
 
 	useInterval(
 		() => {
-			// console.log(gyro.x, gyro.y, gyro.x);
 			clientRef.publish(
-				TOPIC,
+				SENSOR_TOPIC,
 				JSON.stringify({
 					acc: accel,
 					gyro: gyro,
@@ -80,13 +86,13 @@ const SensorData = (props) => {
 				})
 			);
 		},
-		isStreaming ? 50 : null
+		isStreaming ? samplingRate : null
 	);
 
 	useEffect(() => {
-		const client = mqtt.connect(`${SCHEME}://${IP}:${PORT}`, options);
-		client.on("connect", () => console.log("Connected"));
-		setClientRef(client);
+		// const client = mqtt.connect(`${SCHEME}://${IP}:${PORT}`, options);
+		// client.on("connect", () => console.log("Connected"));
+		// setClientRef(client);
 	}, []);
 
 	const sendData = () => {
@@ -102,13 +108,20 @@ const SensorData = (props) => {
 	};
 
 	const connect = () => {
-		// const client = mqtt.connect(`${SCHEME}://${IP}:${PORT}`, options);
-		// client.on("connect", () => console.log("Connected"));
+		const client = mqtt.connect(`${SCHEME}://${serverIP}:${PORT}`, options);
+		client.on("connect", () => {
+			console.log("Connected to broker");
+		});
+		setIsConnected(true);
+		setClientRef(client);
 	};
 
 	const disconnect = async () => {
 		// close the connection if it exists
 		clientRef && clientRef.end();
+		console.log("disconnected from broker");
+		setClientRef(null);
+		setIsConnected(false);
 	};
 
 	const _subscribe = (sensorType) => {
@@ -118,15 +131,15 @@ const SensorData = (props) => {
 				setAccelSub(
 					Accelerometer.addListener((data) => setAccel(data))
 				);
-				Accelerometer.setUpdateInterval(50);
+				Accelerometer.setUpdateInterval(samplingRate);
 				break;
 			case "Gyroscope":
 				setGyroSub(Gyroscope.addListener((data) => setGyro(data)));
-				Gyroscope.setUpdateInterval(50);
+				Gyroscope.setUpdateInterval(samplingRate);
 				break;
 			case "Magnetometer":
 				setMagSub(Magnetometer.addListener((data) => setMag(data)));
-				Magnetometer.setUpdateInterval(50);
+				Magnetometer.setUpdateInterval(samplingRate);
 				break;
 		}
 	};
@@ -152,9 +165,10 @@ const SensorData = (props) => {
 	};
 
 	const startStreaming = () => {
-		//TODO check if client is connected first
-		console.log("Streaming data...");
-		setIsStreaming(true);
+		if (isConnected && clientRef) {
+			console.log("Streaming data...");
+			setIsStreaming(true);
+		}
 	};
 
 	const stopStreaming = () => {
@@ -162,41 +176,88 @@ const SensorData = (props) => {
 		setIsStreaming(false);
 	};
 
-	const updateSamplingRate = (event) => {
-		let freq = parseInt(event.nativeEvent.text);
-
+	const updateSamplingRate = (interval) => {
 		// dont update sampling rate while streaming
 		if (isStreaming) {
 			Alert.alert("Don't change sampling rate while you're streaming !");
 			return;
 		}
 		// clamp sampling rate between 1 and 100Hz
-		freq = Math.min(Math.max(freq, 1), 100);
-		setSamplingRate(freq);
+		interval = Math.max(interval, 50);
+		setSamplingRate(interval);
 
-		// intervalMs - desired interval between milliseconds between sensor updates
-		// 100Hz => 100 updates per second => 0.01 seconds between each update => 0.01 * 1000 milliseconds = 10ms
-		let interval = Math.floor((1 / freq) * 1000);
-		console.log(`freq; ${freq}Hz\t interval: ${interval}ms`);
+		console.log(`sampling interval: ${interval} ms`);
 		Accelerometer.setUpdateInterval(interval);
 	};
 
 	return (
 		<View style={[styles.container, styles.borders]}>
-			{/* stream toggle */}
-			<Text>Stream data</Text>
-			<Switch
-				trackColor={{
-					false: theme.trackFalseColor,
-					true: theme.trackTrueColor,
-				}}
-				thumbColor={isStreaming ? theme.thumbColor : theme.thumbColor}
-				onValueChange={() =>
-					isStreaming ? setIsStreaming(false) : setIsStreaming(true)
-				}
-				value={isStreaming}
+			<Input
+				label="IP address of mqtt broker"
+				placeholder="192.168.1.2"
+				onChangeText={(value) => setServerIP(value)}
 			/>
-
+			<Input
+				label="Sampling interval (min 50 ms)"
+				placeholder="100ms"
+				onChangeText={(interval) => updateSamplingRate(interval)}
+			/>
+			{/* connect to broker */}
+			<View style={[sensorStyles.sensorToggle]}>
+				<Switch
+					trackColor={{
+						false: theme.trackFalseColor,
+						true: theme.trackTrueColor,
+					}}
+					thumbColor={
+						isConnected ? theme.thumbColor : theme.thumbColor
+					}
+					onValueChange={() =>
+						isConnected ? disconnect() : connect()
+					}
+					value={isConnected}
+					style={{
+						transform: [{ scaleX: 1 }, { scaleY: 1 }],
+					}}
+				/>
+				<Text
+					style={[
+						sensorStyles.text,
+						sensorStyles.sensorName,
+						{ color: "#ff9a00" },
+					]}
+				>
+					Connect to broker
+				</Text>
+			</View>
+			{/* stream data toggle */}
+			<View style={[sensorStyles.sensorToggle]}>
+				<Switch
+					trackColor={{
+						false: theme.trackFalseColor,
+						true: theme.trackTrueColor,
+					}}
+					thumbColor={
+						isStreaming ? theme.thumbColor : theme.thumbColor
+					}
+					onValueChange={() =>
+						isStreaming ? stopStreaming() : startStreaming()
+					}
+					value={isStreaming}
+					style={{
+						transform: [{ scaleX: 1 }, { scaleY: 1 }],
+					}}
+				/>
+				<Text
+					style={[
+						sensorStyles.text,
+						sensorStyles.sensorName,
+						{ color: "#ff9a00" },
+					]}
+				>
+					Stream data
+				</Text>
+			</View>
 			<Accel
 				subscription={accelSub}
 				// data={accel}
@@ -215,17 +276,57 @@ const SensorData = (props) => {
 				subscribe={_subscribe}
 				unsubscribe={_unsubscribe}
 			/>
+			<Slider
+				style={{ width: 200, height: 50 }}
+				minimumValue={-40}
+				maximumValue={40}
+				minimumTrackTintColor="#000000"
+				maximumTrackTintColor="#000000"
+				step={5}
+				value={jawAngle}
+				onValueChange={(angle) => {
+					clientRef.publish(
+						JAW_TOPIC,
+						JSON.stringify({
+							jaw_angle: angle,
+						})
+					);
+					setJawAngle(angle);
+				}}
+			/>
+			<Text>Jaw angle: {jawAngle} degrees</Text>
+
+			<Slider
+				style={{ width: 200, height: 50 }}
+				minimumValue={-40}
+				maximumValue={40}
+				minimumTrackTintColor="#000000"
+				maximumTrackTintColor="#000000"
+				step={5}
+				value={linkAngle}
+				onValueChange={(angle) => {
+					clientRef.publish(
+						LINK_TOPIC,
+						JSON.stringify({
+							link_angle: angle,
+						})
+					);
+					setLinkAngle(angle);
+				}}
+			/>
+			<Text>Link angle: {linkAngle} degrees</Text>
 		</View>
 	);
 };
 
 const styles = StyleSheet.create({
 	borders: {
-		borderColor: "green",
-		borderWidth: 3,
+		// borderColor: "green",
+		// borderWidth: 3,
 	},
 	container: {
-		width: 320,
+		width: "90%",
+		height: "90%",
 		flexGrow: 1,
 		flexBasis: "auto",
 
