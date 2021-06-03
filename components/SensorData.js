@@ -39,7 +39,7 @@ const SENSOR_TOPIC = "stream/imu";
 const JAW_TOPIC = "stream/jaw_angle";
 const LINK_TOPIC = "stream/link_angle";
 const SCHEME = "ws"; // TCP doesn't work
-const IP = "192.168.1.7"; // IP of broker
+// const IP = "192.168.1.7"; // IP of broker
 const PORT = "8883";
 
 const SensorData = (props) => {
