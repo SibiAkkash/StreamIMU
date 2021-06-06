@@ -51,8 +51,8 @@ const SensorData = (props) => {
 	// sampleRate in Hz
 	const [samplingRate, setSamplingRate] = useState(100);
 
-	const [jawAngle, setJawAngle] = useState(30);
-	const [linkAngle, setLinkAngle] = useState(30);
+	const [jawAngle, setJawAngle] = useState(0);
+	const [linkAngle, setLinkAngle] = useState(0);
 
 	// subscriptions for listening to sensor values
 	const [accelSub, setAccelSub] = useState(null);
@@ -188,6 +188,9 @@ const SensorData = (props) => {
 
 		console.log(`sampling interval: ${interval} ms`);
 		Accelerometer.setUpdateInterval(interval);
+		Gyroscope.setUpdateInterval(interval);
+		Magnetometer.setUpdateInterval(interval);
+		
 	};
 
 	return (
@@ -278,11 +281,11 @@ const SensorData = (props) => {
 			/>
 			<Slider
 				style={{ width: 200, height: 50 }}
-				minimumValue={-40}
-				maximumValue={40}
+				minimumValue={-1}
+				maximumValue={1}
 				minimumTrackTintColor="#000000"
 				maximumTrackTintColor="#000000"
-				step={5}
+				step={0.2}
 				value={jawAngle}
 				onValueChange={(angle) => {
 					clientRef.publish(
@@ -298,11 +301,11 @@ const SensorData = (props) => {
 
 			<Slider
 				style={{ width: 200, height: 50 }}
-				minimumValue={-40}
-				maximumValue={40}
+				minimumValue={0}
+				maximumValue={5}
 				minimumTrackTintColor="#000000"
 				maximumTrackTintColor="#000000"
-				step={5}
+				step={1}
 				value={linkAngle}
 				onValueChange={(angle) => {
 					clientRef.publish(
