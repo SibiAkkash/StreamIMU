@@ -9,4 +9,4 @@
 * Scan the QR code with the Expo-Go app, now the app will run on your .phone
 
 ## App-screen
-<img src="./assets/app-screen.png" size=250>
+<img src="./assets/app-screen.png" width=250>
